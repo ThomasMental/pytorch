@@ -86,11 +86,23 @@ class TestProcessGroupOCCL(TestDistBackend, DistributedTest._DistTestBase):
         res = fut.value()
         self.assertEqual(res, None)
 
+    def test_occl_gloo_registry_allreduce(self) -> None:
+        store = dist.FileStore(f"{self.file_name}_gloo", self.world_size)
+        pg = dist.ProcessGroupGloo(store, self.rank, self.world_size)
+        tensor = torch.full(
+            (16, 16), self.rank, dtype=torch.float, device="openreg"
+        )
+
+        work = pg.allreduce([tensor])
+        work.wait()
+        self.assertTrue(work.get_future().done())
+
 
 # Drop inherited torch distributed backend tests; we only need the OCCL smoke test.
 _allowed_tests = {
     "test_occl_backend_registration_and_default_group",
     "test_occl_allreduce",
+    "test_occl_gloo_registry_allreduce",
 }
 for _name in dir(TestProcessGroupOCCL):
     if _name.startswith("test_") and _name not in _allowed_tests:
